@@ -1,7 +1,7 @@
-FROM alpine
+FROM python:3.13-slim
 WORKDIR /app
-RUN apk add --no-cache python3 py3-pip sqlite sqlite-libs
-COPY requirement.txt .
-RUN pip install --no-cache-dir --break-system-packages -r requirement.txt
+COPY requirement.txt ./
+RUN pip install --no-cache-dir -r requirement.txt
 COPY . .
-CMD ["python3", "main.py"]
+EXPOSE 8000
+CMD ["python", "main.py"]
