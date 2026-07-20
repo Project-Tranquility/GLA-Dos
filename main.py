@@ -1,14 +1,15 @@
 import discord
-from discord import bot
 from dotenv import load_dotenv
 from os import getenv
 import aiosqlite
+import asyncio
+import uvicorn
+from bot_instance import bot
+from api import app
 
 load_dotenv()
 
 discord_token = getenv("TOKEN")
-
-bot = discord.Bot()
 
 @bot.event
 async def on_ready():
@@ -68,7 +69,7 @@ async def status(ctx):
 
 @bot.slash_command(name="list", description="list all user")
 async def select(ctx):
-    if ctx.author.account != "tadomika_ari":
+    if ctx.author.name != "tadomika_ari":
         await ctx.respond("Pas les perms")
         return
     async with aiosqlite.connect("db/data.db") as db:
@@ -87,4 +88,12 @@ async def init_db():
         await db.commit()
     print("Base de donnée créer")
 
-bot.run(discord_token)
+async def main():
+    port = int(getenv("PORT"))
+    config = uvicorn.Config(app, host="0.0.0.0", port=port, loop="asyncio")
+    server = uvicorn.Server(config)
+    await asyncio.gather(
+        server.serve(),
+        bot.start(discord_token)
+    )
+asyncio.run(main())
