@@ -44,3 +44,42 @@ async def serveur(req: Request):
     print(user)
     await user.send(req.text)
     return {"status": "accepted"}
+
+async def verify_glados_api(x_glados_key: str = fastapi.Header(...)):
+    api_key = x_glados_key
+    try:
+        async with aiosqlite.connect("db/data.db") as db:
+            cursor = await db.execute(
+                "SELECT id, name, account, devid, key FROM users WHERE key = ?",
+                (api_key,),
+            )
+        row = await cursor.fetchone()
+    except Exception as e:
+        raise fastapi.HTTPException(404, "Not Found")
+    if not row:
+        raise fastapi.HTTPException(403, "Forbiden")
+
+async def take_devid(x_glados_key: str = fastapi.Header(...)):
+    api_key = x_glados_key
+    try:
+        async with aiosqlite.connect("db/data.db") as db:
+            cursor = await db.execute(
+                "SELECT id, name, account, devid, key FROM users WHERE key = ?",
+                (api_key,),
+            )
+            row = await cursor.fetchone()
+    except Exception as e:
+        raise fastapi.HTTPException(404, "Not Found")
+    if not row:
+        raise fastapi.HTTPException(403, "Forbiden")
+    return row[3]
+class MessagePayload(BaseModel):
+    text: str
+
+@app.post("/discord/say")
+async def say_in_channel(payload: MessagePayload, devid: int = fastapi.Depends(take_devid)):
+    channel = bot.get_user(devid) or await bot.fetch_user(devid)
+    if channel is None:
+        raise fastapi.HTTPException(404, "Channel not found")
+    await channel.send(payload.text)
+    return {"ok": True}
